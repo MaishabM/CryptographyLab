@@ -134,28 +134,16 @@ def xor(a, b):
 
 
 def generate_keys(key):
-    print("\n KEY GENERATION \n")
 
     pc1_result = permute(key, PC1)
-
-    print("Original Key:")
-    print(key)
-
-    print("\nPC-1 Output:")
-    print(pc1_result)
 
     c = pc1_result[:28]
     d = pc1_result[28:]
 
-    print("\nC0:")
-    print(c)
-
-    print("\nD0:")
-    print(d)
-
     keys = []
 
     for i in range(16):
+
         c = left_shift(c, SHIFT[i])
         d = left_shift(d, SHIFT[i])
 
@@ -163,30 +151,18 @@ def generate_keys(key):
 
         keys.append(round_key)
 
-        print("\n ROUND KEY ", i + 1)
-        print("Left Shift:", SHIFT[i])
-
-        print("C" + str(i + 1) + ":")
-        print(c)
-
-        print("D" + str(i + 1) + ":")
-        print(d)
-
-        print("C" + str(i + 1) + " + D" + str(i + 1) + ":")
-        print(c + d)
-
-        print("K" + str(i + 1) + " after PC-2:")
-        print(round_key)
-
     return keys
 
 
-def s_box_substitution(bits):
+def s_box(bits, detailed=False):
+
     result = ''
 
-    print("\nS-BOX PROCESS:")
+    if detailed:
+        print("\nS-BOX PROCESS:")
 
     for i in range(8):
+
         block = bits[i * 6:(i + 1) * 6]
 
         row_bits = block[0] + block[5]
@@ -199,43 +175,48 @@ def s_box_substitution(bits):
 
         output = format(value, '04b')
 
-        print(
-            "S" + str(i + 1),
-            "Input =", block,
-            "Row =", row_bits,
-            "Column =", column_bits,
-            "Output =", output
-        )
+        if detailed:
+            print(
+                "S" + str(i + 1),
+                "Input =", block,
+                "Row =", row_bits,
+                "Column =", column_bits,
+                "Output =", output
+            )
 
         result += output
 
     return result
 
 
-def feistel(right, key, round_number):
-
-    print("\nEXPANSION BOX INPUT R" + str(round_number - 1) + ":")
-    print(right)
+def feistel(right, key, round_number, detailed=False):
 
     expanded = permute(right, E)
 
-    print("\nEXPANSION BOX OUTPUT:")
-    print(expanded)
+    if detailed:
+        print("\nR" + str(round_number - 1) + ":")
+        print(right)
+
+        print("\nExpansion:")
+        print(expanded)
 
     xored = xor(expanded, key)
 
-    print("\nXOR WITH K" + str(round_number) + ":")
-    print(xored)
+    if detailed:
+        print("\nXOR with K" + str(round_number) + ":")
+        print(xored)
 
-    substituted = s_box_substitution(xored)
+    substituted = s_box(xored, detailed)
 
-    print("\nS-BOX COMBINED OUTPUT:")
-    print(substituted)
+    if detailed:
+        print("\nS-Box Combined Output:")
+        print(substituted)
 
     p_output = permute(substituted, P)
 
-    print("\nP PERMUTATION OUTPUT:")
-    print(p_output)
+    if detailed:
+        print("\nP Permutation:")
+        print(p_output)
 
     return p_output
 
@@ -245,13 +226,10 @@ def des_encrypt(plaintext_hex, key_hex):
     plaintext = format(int(plaintext_hex, 16), '064b')
     key = format(int(key_hex, 16), '064b')
 
-    print("\n\n    DES ENCRYPTION\n")
+    print("\nDES ENCRYPTION\n")
 
-    print("\nPlaintext:")
+    print("Plaintext:")
     print(plaintext_hex.upper())
-
-    print("\nPlaintext in Binary:")
-    print(plaintext)
 
     print("\nKey:")
     print(key_hex.upper())
@@ -261,45 +239,71 @@ def des_encrypt(plaintext_hex, key_hex):
 
     keys = generate_keys(key)
 
-    print("\n INITIAL PERMUTATION\n")
+    print("\nINITIAL PERMUTATION")
+
+    print("\nPlaintext in Binary:")
+    print(plaintext)
+
+    print("\nIP TABLE MAPPING")
+
+    for position in IP:
+        print(str(position) + " -> " + plaintext[position - 1])
 
     ip_output = permute(plaintext, IP)
 
-    print("Initial Permutation Output:")
+    print("\nInitial Permutation Output:")
     print(ip_output)
 
     left = ip_output[:32]
     right = ip_output[32:]
 
-    print("\nLeft side, L0:")
+    print("\nL0:")
     print(left)
 
-    print("\nRight side, R0:")
+    print("\nR0:")
     print(right)
 
     for i in range(16):
 
         round_number = i + 1
 
-        print("\n\n    ROUND", round_number)
+        print("\nROUND " + str(round_number))
 
-        print("\nL" + str(i) + ":")
-        print(left)
+        if round_number == 1:
 
-        print("\nR" + str(i) + ":")
-        print(right)
+            print("\nL0:")
+            print(left)
 
-        print("\nK" + str(round_number) + ":")
-        print(keys[i])
+            print("\nR0:")
+            print(right)
 
-        f_output = feistel(right, keys[i], round_number)
+            print("\nK1:")
+            print(keys[i])
 
-        new_right = xor(left, f_output)
+            f_output = feistel(
+                right,
+                keys[i],
+                round_number,
+                True
+            )
 
-        new_left = right
+            new_right = xor(left, f_output)
+            new_left = right
 
-        print("\nXOR L" + str(i) + " WITH f(R" + str(i) + ", K" + str(round_number) + "):")
-        print(new_right)
+            print("\nXOR L0 WITH f(R0, K1):")
+            print(new_right)
+
+        else:
+
+            f_output = feistel(
+                right,
+                keys[i],
+                round_number,
+                False
+            )
+
+            new_right = xor(left, f_output)
+            new_left = right
 
         left = new_left
         right = new_right
@@ -310,17 +314,14 @@ def des_encrypt(plaintext_hex, key_hex):
         print("\nR" + str(round_number) + ":")
         print(right)
 
-        print("\nCombined L" + str(round_number) + "R" + str(round_number) + ":")
-        print(left + right)
-
-    print("\n\n  FINAL SWAP\n")
+    print("\nFINAL SWAP")
 
     final_swap = right + left
 
     print("\nR16 + L16:")
     print(final_swap)
 
-    print("\n\n      FINAL PERMUTATION\n")
+    print("\nFINAL PERMUTATION")
 
     ciphertext_binary = permute(final_swap, FP)
 
@@ -332,22 +333,25 @@ def des_encrypt(plaintext_hex, key_hex):
     print("\nCiphertext:")
     print(ciphertext)
 
-    print("   ENCRYPTION COMPLETE\n")
-
     return ciphertext
 
 
 plaintext = input("Enter 16 digit hexadecimal plaintext: ")
-key = input("Enter 16 digit hexadecimal key: ")
+key = plaintext
 
 if len(plaintext) != 16 or len(key) != 16:
+
     print("Plaintext and key must contain exactly 16 hexadecimal digits.")
+
 else:
+
     try:
+
         int(plaintext, 16)
         int(key, 16)
 
         des_encrypt(plaintext, key)
 
     except ValueError:
+
         print("Invalid hexadecimal input.")

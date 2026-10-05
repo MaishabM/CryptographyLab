@@ -238,17 +238,17 @@ def des():
         print("Original Key:")
         print(key)
 
-        print("\nPC-1 Output:")
-        print(pc1_result)
+        # print("\nPC-1 Output:")
+        # print(pc1_result)
 
         c = pc1_result[:28]
         d = pc1_result[28:]
 
-        print("\nC0:")
-        print(c)
+        # print("\nC0:")
+        # print(c)
 
-        print("\nD0:")
-        print(d)
+        # print("\nD0:")
+        # print(d)
 
         keys = []
 
@@ -261,18 +261,18 @@ def des():
             keys.append(round_key)
 
             print("\n ROUND KEY ", i + 1)
-            print("Left Shift:", SHIFT[i])
+            # print("Left Shift:", SHIFT[i])
 
-            print("C" + str(i + 1) + ":")
-            print(c)
+            # print("C" + str(i + 1) + ":")
+            # print(c)
 
-            print("D" + str(i + 1) + ":")
-            print(d)
+            # print("D" + str(i + 1) + ":")
+            # print(d)
 
-            print("C" + str(i + 1) + " + D" + str(i + 1) + ":")
-            print(c + d)
+            # print("C" + str(i + 1) + " + D" + str(i + 1) + ":")
+            # print(c + d)
 
-            print("K" + str(i + 1) + " after PC-2:")
+            # print("K" + str(i + 1) + " after PC-2:")
             print(round_key)
 
         return keys
@@ -347,8 +347,6 @@ def des():
         print("\nPlaintext:")
         print(plaintext_hex.upper())
 
-        print("\nPlaintext in Binary:")
-        print(plaintext)
 
         print("\nKey:")
         print(key_hex.upper())
@@ -360,6 +358,12 @@ def des():
 
         print("\n INITIAL PERMUTATION\n")
 
+        print("\nPlaintext in Binary:")
+        print(plaintext)
+        print()
+
+        print(IP)
+        print()
         ip_output = permute(plaintext, IP)
 
         print("Initial Permutation Output:")

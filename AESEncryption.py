@@ -17,58 +17,135 @@ SBOX = [
     0x8c,0xa1,0x89,0x0d,0xbf,0xe6,0x42,0x68,0x41,0x99,0x2d,0x0f,0xb0,0x54,0xbb,0x16
 ]
 
-RCON = [0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36]
 
+def characters_to_hex(text):
 
-def hex_to_bytes(text):
-    data = []
+    result = ""
+
     index = 0
 
     while index < len(text):
+
+        character = text[index].lower()
+
+        if character < 'a' or character > 'z':
+            print("Error: character plaintext can contain only a-z.")
+            exit()
+
+        value = ord(character) - ord('a')
+
+        result = result + format(value, "02X")
+
+        index = index + 1
+
+    return result
+
+
+def is_hexadecimal(text):
+
+    if len(text) == 0:
+        return False
+
+    index = 0
+
+    while index < len(text):
+
+        character = text[index].upper()
+
+        if not (('0' <= character <= '9') or ('A' <= character <= 'F')):
+            return False
+
+        index = index + 1
+
+    return True
+
+
+def convert_plaintext(text):
+
+    text = text.strip()
+
+    if is_hexadecimal(text) and len(text) % 2 == 0:
+
+        return text.upper()
+
+    return characters_to_hex(text)
+
+
+def pad_plaintext(text):
+
+    while len(text) < 32:
+
+        text = text + "19"
+
+    return text
+
+
+def hex_to_bytes(text):
+
+    data = []
+
+    index = 0
+
+    while index < len(text):
+
         value = text[index] + text[index + 1]
+
         data.append(int(value, 16))
+
         index = index + 2
 
     return data
 
 
 def bytes_to_hex(data):
+
     result = ""
+
     index = 0
 
     while index < len(data):
+
         value = data[index]
+
         result = result + format(value, "02X")
+
         index = index + 1
 
     return result
 
 
 def print_state(state):
+
     row = 0
 
     while row < 4:
+
         print(
             format(state[row][0], "02X"),
             format(state[row][1], "02X"),
             format(state[row][2], "02X"),
             format(state[row][3], "02X")
         )
+
         row = row + 1
 
     print()
 
 
 def make_state(data):
+
     state = [[0 for i in range(4)] for j in range(4)]
 
     column = 0
 
     while column < 4:
+
         row = 0
 
         while row < 4:
+
             state[row][column] = data[row + (column * 4)]
+
             row = row + 1
 
         column = column + 1
@@ -77,15 +154,19 @@ def make_state(data):
 
 
 def state_to_bytes(state):
+
     data = []
 
     column = 0
 
     while column < 4:
+
         row = 0
 
         while row < 4:
+
             data.append(state[row][column])
+
             row = row + 1
 
         column = column + 1
@@ -93,37 +174,18 @@ def state_to_bytes(state):
     return data
 
 
-def xtime(value):
-    temp = value << 1
-
-    if value >= 128:
-        temp = temp ^ 0x1B
-
-    return temp & 0xFF
-
-
-def gf_mul(a, b):
-    result = 0
-
-    while b > 0:
-
-        if b & 1:
-            result = result ^ a
-
-        a = xtime(a)
-        b = b >> 1
-
-    return result
-
-
 def sub_bytes(state):
+
     row = 0
 
     while row < 4:
+
         column = 0
 
         while column < 4:
+
             state[row][column] = SBOX[state[row][column]]
+
             column = column + 1
 
         row = row + 1
@@ -132,6 +194,7 @@ def sub_bytes(state):
 
 
 def shift_rows(state):
+
     row = 1
 
     while row < 4:
@@ -141,7 +204,9 @@ def shift_rows(state):
         column = 0
 
         while column < 4:
+
             temp[column] = state[row][(column + row) % 4]
+
             column = column + 1
 
         state[row] = temp
@@ -151,7 +216,38 @@ def shift_rows(state):
     return state
 
 
+def xtime(value):
+
+    temp = value << 1
+
+    if value >= 128:
+
+        temp = temp ^ 0x1B
+
+    return temp & 0xFF
+
+
+def gf_mul(a, b):
+
+    result = 0
+
+    while b > 0:
+
+        if b & 1:
+
+            result = result ^ a
+
+        a = xtime(a)
+
+        b = b >> 1
+
+    return result
+
+
+# MixColumns
+
 def mix_columns(state):
+
     column = 0
 
     while column < 4:
@@ -161,10 +257,33 @@ def mix_columns(state):
         a2 = state[2][column]
         a3 = state[3][column]
 
-        b0 = gf_mul(2, a0) ^ gf_mul(3, a1) ^ a2 ^ a3
-        b1 = a0 ^ gf_mul(2, a1) ^ gf_mul(3, a2) ^ a3
-        b2 = a0 ^ a1 ^ gf_mul(2, a2) ^ gf_mul(3, a3)
-        b3 = gf_mul(3, a0) ^ a1 ^ a2 ^ gf_mul(2, a3)
+        b0 = (
+            gf_mul(2, a0)
+            ^ gf_mul(3, a1)
+            ^ a2
+            ^ a3
+        )
+
+        b1 = (
+            a0
+            ^ gf_mul(2, a1)
+            ^ gf_mul(3, a2)
+            ^ a3
+        )
+
+        b2 = (
+            a0
+            ^ a1
+            ^ gf_mul(2, a2)
+            ^ gf_mul(3, a3)
+        )
+
+        b3 = (
+            gf_mul(3, a0)
+            ^ a1
+            ^ a2
+            ^ gf_mul(2, a3)
+        )
 
         state[0][column] = b0
         state[1][column] = b1
@@ -176,199 +295,77 @@ def mix_columns(state):
     return state
 
 
-def add_round_key(state, key_state):
-    row = 0
 
-    while row < 4:
-
-        column = 0
-
-        while column < 4:
-            state[row][column] = state[row][column] ^ key_state[row][column]
-            column = column + 1
-
-        row = row + 1
-
-    return state
+plain_text = input("Enter plaintext (characters or hexadecimal): ").strip()
 
 
-def rot_word(word):
-    result = [0, 0, 0, 0]
+plain_hex = convert_plaintext(plain_text)
 
-    result[0] = word[1]
-    result[1] = word[2]
-    result[2] = word[3]
-    result[3] = word[0]
-
-    return result
+print()
+print("Converted plaintext:")
+print(plain_hex)
 
 
-def sub_word(word):
-    result = [0, 0, 0, 0]
+if len(plain_hex) > 32:
 
-    index = 0
+    print(
+        "Error: plaintext cannot be more than 32 hexadecimal digits."
+    )
 
-    while index < 4:
-        result[index] = SBOX[word[index]]
-        index = index + 1
-
-    return result
-
-
-def key_expansion(key):
-    words = []
-
-    index = 0
-
-    while index < 4:
-
-        words.append([
-            key[index * 4],
-            key[index * 4 + 1],
-            key[index * 4 + 2],
-            key[index * 4 + 3]
-        ])
-
-        index = index + 1
-
-    index = 4
-
-    while index < 44:
-
-        temp = list(words[index - 1])
-
-        if index % 4 == 0:
-
-            temp = rot_word(temp)
-            temp = sub_word(temp)
-
-            temp[0] = temp[0] ^ RCON[index // 4]
-
-        new_word = [0, 0, 0, 0]
-
-        j = 0
-
-        while j < 4:
-            new_word[j] = words[index - 4][j] ^ temp[j]
-            j = j + 1
-
-        words.append(new_word)
-
-        index = index + 1
-
-    return words
-
-
-def round_keys_from_words(words):
-    keys = []
-
-    round_index = 0
-
-    while round_index < 11:
-
-        key_bytes = []
-
-        word_index = 0
-
-        while word_index < 4:
-
-            byte_index = 0
-
-            while byte_index < 4:
-                key_bytes.append(
-                    words[round_index * 4 + word_index][byte_index]
-                )
-
-                byte_index = byte_index + 1
-
-            word_index = word_index + 1
-
-        keys.append(make_state(key_bytes))
-
-        round_index = round_index + 1
-
-    return keys
-
-
-plain_text = input(
-    "Enter the 128 bit or 32 hexadecimal digits plaintext: "
-).strip()
-
-key_text = input(
-    "Enter the 128 bit or 32 hexadecimal digits key: "
-).strip()
-
-if len(plain_text) != 32 or len(key_text) != 32:
-    print("Error: plaintext and key must contain exactly 32 hexadecimal digits.")
     exit()
 
-plain_bytes = hex_to_bytes(plain_text)
-key_bytes = hex_to_bytes(key_text)
+if len(plain_hex) < 32:
 
-words = key_expansion(key_bytes)
+    plain_hex = pad_plaintext(plain_hex)
 
-round_keys = round_keys_from_words(words)
+
+print()
+print("Plaintext after padding:")
+print(plain_hex)
+
+
+plain_bytes = hex_to_bytes(plain_hex)
+
+
+# AES state
 
 state = make_state(plain_bytes)
 
-print("Initial State")
-print_state(state)
 
-state = add_round_key(state, round_keys[0])
-
-print("After Initial AddRoundKey")
+print()
+print("Plaintext State")
 print_state(state)
 
 
-round_number = 1
-
-while round_number <= 9:
-
-    print("Round", round_number)
-
-    state = sub_bytes(state)
-
-    print("After SubBytes")
-    print_state(state)
-
-    state = shift_rows(state)
-
-    print("After ShiftRows")
-    print_state(state)
-
-    state = mix_columns(state)
-
-    print("After MixColumns")
-    print_state(state)
-
-    state = add_round_key(state, round_keys[round_number])
-
-    print("After AddRoundKey")
-    print_state(state)
-
-    round_number = round_number + 1
-
-
-print("Final Round")
+# SubBytes
 
 state = sub_bytes(state)
 
 print("After SubBytes")
 print_state(state)
 
+
+# ShiftRows
+
 state = shift_rows(state)
 
 print("After ShiftRows")
 print_state(state)
 
-state = add_round_key(state, round_keys[10])
 
-print("After AddRoundKey")
+# MixColumns
+
+state = mix_columns(state)
+
+print("After MixColumns")
 print_state(state)
 
 
-cipher_bytes = state_to_bytes(state)
+# Final state
 
-cipher_text = bytes_to_hex(cipher_bytes)
+result_bytes = state_to_bytes(state)
 
-print("Ciphertext:", cipher_text)
+result_hex = bytes_to_hex(result_bytes)
+
+print("Result after MixColumns:")
+print(result_hex)
